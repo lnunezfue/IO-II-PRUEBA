@@ -1,0 +1,33 @@
+
+/* @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Open+Sans:ital,wght@0,700;1,700&display=swap'); */
+:root{
+    --font-libre-franklin:'Libre Franklin',sans-serif;
+    --font-chivo: 'Chivo',sans-serif;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body{
+    font-family: var(var(--font-libre-franklin));
+}
+
+h1,h2,h3,h4,h5,h6{
+    font-family: var(--font-chivo);
+}
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+.jsx_matriz_pivote{
+    color: red;
+    font-weight: bold;
+}
