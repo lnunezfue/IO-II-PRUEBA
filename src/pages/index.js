@@ -15,4 +15,4 @@ export * from './Separable';
 export * from './FractionalPage'; 
 export * from './NonConvexPage'; 
 export * from './ConvexPage'; 
-
+export * from './DynamicProgrammingPage'; 

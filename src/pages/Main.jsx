@@ -192,6 +192,18 @@ export const Main = () => {
                 Resuelve problemas de optimización con funciones cuadráticas, comúnmente aplicadas en áreas de finanzas y economía.
               </p>
             </Link>
+            <Link
+              to="dynamic-programming"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col items-center justify-center"
+            >
+              <CogIcon className="w-12 h-12 text-gray-600 dark:text-gray-400 mb-4" />
+              <h2 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300 text-center">
+                Programación Dinámica
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 text-center">
+                Resuelve problemas complejos de optimización dividiéndolos en subproblemas más simples, aplicable en rutas, mochila, secuencias, entre otros.
+              </p>
+            </Link>
           </div>
         </div>
       </div>
@@ -209,23 +221,36 @@ function FunctionIcon(props) {
   );
 }
 
-function FractionsIcon(props) {
+function CogIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9l6 6 6-6" />
-      <path d="M6 15l6 6 6-6" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 1V3M12 21V23M4.22 4.22L5.64 5.64M18.36 18.36L19.78 19.78M1 12H3M21 12H23M4.22 19.78L5.64 18.36M18.36 5.64L19.78 4.22" />
     </svg>
   );
 }
 
-function NonConvexIcon(props) {
+
+
+function FractionsIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 4l16 16" />
-      <path d="M4 16L16 4" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <line x1="5" y1="6" x2="19" y2="6" />
     </svg>
   );
 }
+
+
+function NonConvexIcon(props) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4L19 4L19 20L5 20Z" />
+      <path d="M5 12L19 12" />
+    </svg>
+  );
+}
+
 
 function GeometryIcon(props) {
   return (
@@ -235,21 +260,27 @@ function GeometryIcon(props) {
   );
 }
 
+
 function ConvexIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9l6 6 6-6" />
+      <path d="M4 12C4 8.13 8.13 4 12 4C15.87 4 20 8.13 20 12" />
+      <path d="M4 12C4 15.87 8.13 20 12 20C15.87 20 20 15.87 20 12" />
     </svg>
   );
 }
 
+
+
 function ParabolaIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9l6 6 6-6" />
+      <path d="M3 12C3 6.48 9.48 3 12 3C14.52 3 21 6.48 21 12" />
+      <path d="M12 12L12 21" />
     </svg>
   );
 }
+
 
 
 function CalculatorIcon(props) {

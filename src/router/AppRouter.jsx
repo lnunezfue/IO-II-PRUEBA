@@ -15,7 +15,8 @@ import {
   Separable,
   FractionalPage,
   NonConvexPage,
-  ConvexPage
+  ConvexPage,
+  DynamicProgrammingPage
 } from "../pages/index"; // Importación desde el index, donde todas las páginas están exportadas
 
 const AppRouter = () => {
@@ -37,6 +38,7 @@ const AppRouter = () => {
       <Route path="/fractional-programming" element={<FractionalPage />} />
       <Route path="/non-convex-programming" element={<NonConvexPage />} />
       <Route path="/convex-programming" element={<ConvexPage />} />
+      <Route path="/dynamic-programming" element={<DynamicProgrammingPage />} />
     </Routes>
   );
 };
