@@ -1,158 +1,166 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { evaluate } from "mathjs"; // Para poder hacer la evaluación de expresiones matemáticas
+import { evaluate } from "mathjs"; // Usamos mathjs solo para evaluar funciones
 
 export const FractionalPage = () => {
-  const { handleSubmit, register, reset } = useForm();
+  const { handleSubmit, reset } = useForm();
   const [objectiveFunction, setObjectiveFunction] = useState("");
   const [constraints, setConstraints] = useState([]);
   const [result, setResult] = useState([]);
-  const [variables, setVariables] = useState({ x1: 0, x2: 0 });
+  const [objectiveType, setObjectiveType] = useState("max"); // max o min
 
   const onSubmit = () => {
-    calculateFractional({ objectiveFunction, constraints });
+    calculateFraccionaria({ objectiveFunction, constraints });
   };
 
-  const calculateFractional = ({ objectiveFunction, constraints }) => {
-    const { x1, x2 } = variables;
-
-    try {
-      // Evaluar la función objetivo fraccional: f(x) / g(x)
-      const [fExpression, gExpression] = objectiveFunction.split('/');
-      const fResult = evaluate(fExpression, { x1, x2 });
-      const gResult = evaluate(gExpression, { x1, x2 });
-
-      // Evitar la división por cero
-      if (gResult === 0) {
-        throw new Error("El denominador no puede ser cero.");
-      }
-
-      const objectiveValue = fResult / gResult;
-
-      // Evaluar restricciones
-      const constraintsResults = constraints.map((constraint) => {
-        const constraintResult = evaluate(constraint.expression, { x1, x2 });
-        let isValid;
-
-        // Validación de restricciones
-        switch (constraint.operator) {
-          case "<=":
-            isValid = constraintResult <= constraint.limit;
-            break;
-          case ">=":
-            isValid = constraintResult >= constraint.limit;
-            break;
-          case "<":
-            isValid = constraintResult < constraint.limit;
-            break;
-          case ">":
-            isValid = constraintResult > constraint.limit;
-            break;
-          case "=":
-            isValid = constraintResult === constraint.limit;
-            break;
-          default:
-            isValid = false;
-            break;
-        }
-
-        return { 
-          expression: constraint.expression, 
-          result: constraintResult, 
-          isValid: isValid 
-        };
-      });
-
-      // Resultados
-      setResult([
-        { label: "Función Objetivo", value: objectiveValue },
-        ...constraintsResults.map((constraint, index) => ({
-          label: `Restricción ${index + 1}`,
-          value: constraint.result,
-          isValid: constraint.isValid ? "Cumple" : "No Cumple",
-        })),
-      ]);
-    } catch (error) {
-      console.error("Error al calcular: ", error);
-      setResult([{ label: "Error", value: "Hubo un problema con los cálculos." }]);
+  const calculateFraccionaria = ({ objectiveFunction, constraints }) => {
+    // Resolvemos la optimización para encontrar puntos factibles y optimizar
+    const feasiblePoints = findFeasiblePoints(constraints);
+    
+    if (feasiblePoints.length === 0) {
+      setResult([{ label: "Error", value: "No se encontraron soluciones viables" }]);
+      return;
     }
+
+    let bestValue = objectiveType === "max" ? -Infinity : Infinity;
+    let bestPoint = {};
+
+    feasiblePoints.forEach((point) => {
+      const scope = { x1: point.x1, x2: point.x2 };
+      const objResult = evaluate(objectiveFunction, scope);
+
+      // Determinamos el mejor valor según el tipo de optimización
+      if ((objectiveType === "max" && objResult > bestValue) ||
+          (objectiveType === "min" && objResult < bestValue)) {
+        bestValue = objResult;
+        bestPoint = point;
+      }
+    });
+
+    setResult([
+      { label: "Función Objetivo", value: objectiveFunction },
+      { label: `${objectiveType === "max" ? "Máximo" : "Mínimo"} Z`, value: bestValue, x1: bestPoint.x1, x2: bestPoint.x2 },
+    ]);
+  };
+
+  const findFeasiblePoints = (constraints) => {
+    const points = [];
+
+    // Muestreo de puntos para encontrar soluciones viables
+    for (let x1 = 0; x1 <= 10; x1 += 0.1) {
+      for (let x2 = 0; x2 <= 10; x2 += 0.1) {
+        if (isFeasible(x1, x2, constraints)) {
+          points.push({ x1, x2 });
+        }
+      }
+    }
+
+    return points;
+  };
+
+  const isFeasible = (x1, x2, constraints) => {
+    for (const constraint of constraints) {
+      const scope = { x1, x2 };
+      const expression = evaluate(constraint.expression, scope);
+      if (constraint.operator === "<=" && expression > constraint.limit) return false;
+      if (constraint.operator === ">=" && expression < constraint.limit) return false;
+      if (constraint.operator === "<" && expression >= constraint.limit) return false;
+      if (constraint.operator === ">" && expression <= constraint.limit) return false;
+      if (constraint.operator === "=" && expression !== constraint.limit) return false;
+    }
+    return true;
   };
 
   const handleReset = () => {
     reset();
     setObjectiveFunction("");
     setConstraints([]);
-    setVariables({ x1: 0, x2: 0 });
     setResult([]);
+  };
+
+  const handleAddConstraint = () => {
+    setConstraints([...constraints, { expression: "", operator: "", limit: "" }]);
+  };
+
+  const handleConstraintChange = (index, field, value) => {
+    const updatedConstraints = [...constraints];
+    updatedConstraints[index][field] = value;
+    setConstraints(updatedConstraints);
+  };
+
+  const handleObjectiveTypeChange = (event) => {
+    setObjectiveType(event.target.value);
   };
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold text-center text-blue-700 mb-6">Programación Fraccional</h1>
+      <h1 className="text-3xl font-bold text-blue-500 text-center mb-6">Programación Fraccionaria</h1>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded shadow-md">
-        {/* Función Objetivo */}
         <div className="mb-4">
           <label className="block font-semibold text-gray-700">Función Objetivo:</label>
           <input
             type="text"
             value={objectiveFunction}
             onChange={(e) => setObjectiveFunction(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
-            placeholder="Ej: 4*x1 + 3*x2 / 2*x1 + x2"
+            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Ej: (4*x1 + 3*x2) / (x1 + x2)"
           />
         </div>
 
-        {/* Restricciones */}
         <div className="mb-4">
-          <label className="block font-semibold text-gray-700">Restricciones (expresiones con operadores lógicos):</label>
-          <input
-            type="text"
-            placeholder="Ej: x1 + x2 <= 6, x1 >= 1, x2 >= 2"
-            value={constraints.map((constraint) => constraint.expression).join(", ")}
-            onChange={(e) => {
-              const newConstraints = e.target.value
-                .split(",")
-                .map((c) => {
-                  const operatorMatch = c.match(/<=|>=|<|>|=/);
-                  if (operatorMatch) {
-                    const [expr, limit] = c.split(operatorMatch[0]).map((item) => item.trim());
-                    return { 
-                      expression: expr, 
-                      operator: operatorMatch[0], 
-                      limit: parseFloat(limit) 
-                    };
-                  }
-                  return null;
-                })
-                .filter((constraint) => constraint !== null);
-              setConstraints(newConstraints);
-            }}
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
+          <label className="block font-semibold text-gray-700">Restricciones:</label>
+          {constraints.map((constraint, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={constraint.expression}
+                onChange={(e) => handleConstraintChange(index, "expression", e.target.value)}
+                placeholder="Expresión"
+                className="w-1/2 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <select
+                value={constraint.operator}
+                onChange={(e) => handleConstraintChange(index, "operator", e.target.value)}
+                className="w-1/4 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Operador</option>
+                <option value="<=">≤</option>
+                <option value="<">&lt;</option>
+                <option value=">=">≥</option>
+                <option value=">">&gt;</option>
+                <option value="=">=</option>
+              </select>
+              <input
+                type="number"
+                value={constraint.limit}
+                onChange={(e) => handleConstraintChange(index, "limit", e.target.value)}
+                placeholder="Límite"
+                className="w-1/4 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={handleAddConstraint}
+            className="w-full bg-blue-500 text-white rounded-lg py-2 hover:bg-blue-600 transition duration-300"
+          >
+            Agregar Restricción
+          </button>
         </div>
 
-        {/* Variables */}
         <div className="mb-4">
-          <label className="block font-semibold text-gray-700">Valores de las variables:</label>
-          <div className="flex space-x-4">
-            <input
-              type="number"
-              value={variables.x1}
-              onChange={(e) => setVariables({ ...variables, x1: parseFloat(e.target.value) })}
-              placeholder="x1"
-              className="w-1/2 p-2 border border-gray-300 rounded"
-            />
-            <input
-              type="number"
-              value={variables.x2}
-              onChange={(e) => setVariables({ ...variables, x2: parseFloat(e.target.value) })}
-              placeholder="x2"
-              className="w-1/2 p-2 border border-gray-300 rounded"
-            />
-          </div>
+          <label className="block font-semibold text-gray-700">Tipo de Optimización:</label>
+          <select
+            value={objectiveType}
+            onChange={handleObjectiveTypeChange}
+            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="max">Máximo</option>
+            <option value="min">Mínimo</option>
+          </select>
         </div>
 
-        <button type="submit" className="w-full bg-blue-600 text-white rounded-lg py-2 hover:bg-blue-700 transition duration-300">
+        <button type="submit" className="w-full bg-blue-500 text-white rounded-lg py-2 hover:bg-blue-600 transition duration-300">
           Calcular
         </button>
         <button type="button" onClick={handleReset} className="w-full bg-gray-600 text-white rounded-lg py-2 mt-2 hover:bg-gray-700 transition duration-300">
@@ -166,8 +174,8 @@ export const FractionalPage = () => {
           <h2 className="text-xl font-semibold text-gray-700">Resultados:</h2>
           <ul className="list-disc list-inside">
             {result.map((metric, index) => (
-              <li key={index} className="text-gray-600">
-                {metric.label}: <strong>{metric.value}</strong> {metric.isValid && `- ${metric.isValid}`}
+              <li key={index} className="text-gray-700 p-2">
+                {metric.label}: <strong>{metric.value}</strong> {metric.x1 && `- x1: ${metric.x1}, x2: ${metric.x2}`}
               </li>
             ))}
           </ul>

@@ -1,55 +1,75 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { evaluate } from "mathjs"; // Asegúrate de tener mathjs instalado
+import { evaluate } from "mathjs";
 
 export const QuadraticPage = () => {
   const { handleSubmit, reset } = useForm();
-  const [objectiveFunction, setObjectiveFunction] = useState("");  // Función Objetivo
-  const [constraints, setConstraints] = useState([""]);  // Restricciones
+  const [objectiveFunction, setObjectiveFunction] = useState("");
+  const [constraints, setConstraints] = useState([]);
+  const [optimizationType, setOptimizationType] = useState("maximizar");
   const [result, setResult] = useState([]);
 
-  // Función para evaluar la función objetivo y las restricciones
   const calculateQuadratic = () => {
+    const x1Values = [0, 1, 2, 3, 4, 5];
+    const x2Values = [0, 1, 2, 3, 4, 5];
+    let bestValue = optimizationType === "maximizar" ? -Infinity : Infinity;
+    let bestX1 = 0;
+    let bestX2 = 0;
+
     try {
-      // Valores de ejemplo para x1 y x2 (puedes cambiarlos)
-      const x1 = 2;
-      const x2 = 1;
+      x1Values.forEach((x1) => {
+        x2Values.forEach((x2) => {
+          const scope = { x1, x2 };
+          const objResult = evaluate(objectiveFunction, scope);
 
-      // Evaluar la función objetivo
-      const objResult = evaluate(objectiveFunction, { x1, x2 });
+          const isValid = constraints.every(({ expression, operator, limit }) => {
+            const constraintResult = evaluate(expression, scope);
+            switch (operator) {
+              case "<=":
+                return constraintResult <= limit;
+              case ">=":
+                return constraintResult >= limit;
+              case "<":
+                return constraintResult < limit;
+              case ">":
+                return constraintResult > limit;
+              case "=":
+                return constraintResult === limit;
+              default:
+                return false;
+            }
+          });
 
-      let constraintsValid = true;
-      const evaluatedConstraints = [];
-
-      // Evaluar las restricciones
-      constraints.forEach((constraint, index) => {
-        const constraintResult = evaluate(constraint, { x1, x2 });
-
-        // Evaluar si la restricción es válida
-        const isValid = constraintResult >= 0;
-        if (!isValid) {
-          constraintsValid = false;
-        }
-
-        // Almacenar el detalle de la evaluación de la restricción
-        evaluatedConstraints.push({
-          label: `Restricción ${index + 1}`,
-          result: constraintResult,
-          x1,
-          x2,
-          valid: isValid ? "Sí" : "No"
+          if (
+            isValid &&
+            ((optimizationType === "maximizar" && objResult > bestValue) ||
+              (optimizationType === "minimizar" && objResult < bestValue))
+          ) {
+            bestValue = objResult;
+            bestX1 = x1;
+            bestX2 = x2;
+          }
         });
       });
 
-      // Agregar los resultados a la salida
       setResult([
-        { label: "Resultado Función Objetivo", value: objResult },
-        { label: "Restricciones Cumplidas", value: constraintsValid ? "Sí" : "No" },
-        ...evaluatedConstraints,
+        { label: "Valor Óptimo de Z", value: bestValue },
+        { label: "Valor de x1", value: bestX1 },
+        { label: "Valor de x2", value: bestX2 },
       ]);
     } catch (error) {
-      setResult([{ label: "Error", value: "Hubo un error en la evaluación de la expresión." }]);
+      setResult([{ label: "Error", value: "Ocurrió un problema durante la evaluación." }]);
     }
+  };
+
+  const handleAddConstraint = () => {
+    setConstraints([...constraints, { expression: "", operator: "<=", limit: "" }]);
+  };
+
+  const handleConstraintChange = (index, field, value) => {
+    const updatedConstraints = [...constraints];
+    updatedConstraints[index][field] = value;
+    setConstraints(updatedConstraints);
   };
 
   const onSubmit = () => {
@@ -59,7 +79,7 @@ export const QuadraticPage = () => {
   const handleReset = () => {
     reset();
     setObjectiveFunction("");
-    setConstraints([""]);
+    setConstraints([]);
     setResult([]);
   };
 
@@ -67,9 +87,8 @@ export const QuadraticPage = () => {
     <div className="container mx-auto p-8">
       <h1 className="text-3xl font-bold text-center text-purple-700 mb-6">Programación Cuadrática</h1>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded shadow-md">
-        {/* Entrada de la Función Objetivo */}
         <div className="mb-4">
-          <label className="block font-semibold text-gray-700">Función Objetivo (Ejemplo: c1*x1^2 + c2*x2^2 + c3*x1*x2 + d1*x1 + d2*x2 + c):</label>
+          <label className="block font-semibold text-gray-700">Función Objetivo (Z):</label>
           <input
             type="text"
             value={objectiveFunction}
@@ -79,19 +98,58 @@ export const QuadraticPage = () => {
           />
         </div>
 
-        {/* Entrada de las Restricciones */}
         <div className="mb-4">
-          <label className="block font-semibold text-gray-700">Restricciones (separadas por comas):</label>
-          <input
-            type="text"
-            value={constraints.join(",")}
-            onChange={(e) => setConstraints(e.target.value.split(",").map((str) => str.trim()))}
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-600"
-            placeholder="Ej: x1^2 + x2^2 <= 9, x1 + x2 >= 3"
-          />
+          <label className="block font-semibold text-gray-700">Restricciones:</label>
+          {constraints.map((constraint, index) => (
+            <div key={index} className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={constraint.expression}
+                onChange={(e) => handleConstraintChange(index, "expression", e.target.value)}
+                placeholder="Expresión (Ej: x1 + x2)"
+                className="w-1/2 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-600"
+              />
+              <select
+                value={constraint.operator}
+                onChange={(e) => handleConstraintChange(index, "operator", e.target.value)}
+                className="w-1/4 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-600"
+              >
+                <option value="<=">≤</option>
+                <option value=">=">≥</option>
+                <option value="<">&lt;</option>
+                <option value=">">&gt;</option>
+                <option value="=">=</option>
+              </select>
+              <input
+                type="number"
+                value={constraint.limit}
+                onChange={(e) => handleConstraintChange(index, "limit", e.target.value)}
+                placeholder="Límite"
+                className="w-1/4 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-600"
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={handleAddConstraint}
+            className="w-full bg-purple-600 text-white rounded-lg py-2 hover:bg-purple-700 transition duration-300"
+          >
+            Agregar Restricción
+          </button>
         </div>
 
-        {/* Botones de acción */}
+        <div className="mb-4">
+          <label className="block font-semibold text-gray-700">Tipo de Optimización:</label>
+          <select
+            value={optimizationType}
+            onChange={(e) => setOptimizationType(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-600"
+          >
+            <option value="maximizar">Maximizar</option>
+            <option value="minimizar">Minimizar</option>
+          </select>
+        </div>
+
         <button
           type="submit"
           className="w-full bg-purple-600 text-white rounded-lg py-2 hover:bg-purple-700 transition duration-300"
@@ -107,7 +165,6 @@ export const QuadraticPage = () => {
         </button>
       </form>
 
-      {/* Mostrar resultados */}
       {result.length > 0 && (
         <div className="mt-6">
           <h2 className="text-xl font-semibold text-gray-700">Resultados:</h2>
@@ -115,12 +172,6 @@ export const QuadraticPage = () => {
             {result.map((metric, index) => (
               <li key={index} className="text-gray-600">
                 <strong>{metric.label}:</strong> {metric.value}
-                {metric.x1 !== undefined && metric.x2 !== undefined && (
-                  <p className="text-gray-500 mt-2">
-                    <strong>Evaluación:</strong> Para la restricción, con x1 = {metric.x1}, x2 = {metric.x2}.
-                    Resultado de la restricción: <strong>{metric.result}</strong> - {metric.valid}
-                  </p>
-                )}
               </li>
             ))}
           </ul>
@@ -131,5 +182,3 @@ export const QuadraticPage = () => {
 };
 
 export default QuadraticPage;
-
-

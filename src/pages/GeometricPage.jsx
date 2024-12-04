@@ -1,53 +1,71 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { evaluate } from "mathjs"; // Asegúrate de tener mathjs instalado
+import { evaluate } from "mathjs";
 
 export const GeometricPage = () => {
   const { handleSubmit, reset } = useForm();
   const [objectiveFunction, setObjectiveFunction] = useState("");
-  const [constraints, setConstraints] = useState([""]);
+  const [constraints, setConstraints] = useState([{ expression: "", operator: "<=", limit: "" }]);
+  const [optimizationType, setOptimizationType] = useState("maximize"); // maximize o minimize
   const [result, setResult] = useState([]);
 
-  // Función para evaluar la función objetivo y las restricciones
+  // Función para calcular el resultado
   const calculateGeometric = () => {
     try {
-      // Definir valores de ejemplo para x1 y x2
-      const x1 = 2;
-      const x2 = 1;
+      let bestResult = optimizationType === "maximize" ? -Infinity : Infinity;
+      let bestValues = null;
 
-      // Evaluar la función objetivo
-      const objResult = evaluate(objectiveFunction, { x1, x2 });
+      // Explorar valores de x1 y x2 en un rango definido
+      for (let x1 = -10; x1 <= 10; x1 += 0.5) {
+        for (let x2 = -10; x2 <= 10; x2 += 0.5) {
+          let constraintsValid = true;
 
-      let constraintsValid = true;
-      const evaluatedConstraints = [];
+          // Verificar restricciones
+          for (let constraint of constraints) {
+            const { expression, operator, limit } = constraint;
+            const evaluatedConstraint = evaluate(expression, { x1, x2 });
+            const parsedLimit = parseFloat(limit);
 
-      // Evaluar las restricciones
-      constraints.forEach((constraint, index) => {
-        const constraintResult = evaluate(constraint, { x1, x2 });
+            // Validar la restricción según el operador
+            if (
+              (operator === "<=" && evaluatedConstraint > parsedLimit) ||
+              (operator === ">=" && evaluatedConstraint < parsedLimit) ||
+              (operator === "=" && evaluatedConstraint !== parsedLimit)
+            ) {
+              constraintsValid = false;
+              break;
+            }
+          }
 
-        // Evaluar si la restricción es válida
-        const isValid = constraintResult >= 0;
-        if (!isValid) {
-          constraintsValid = false;
+          if (constraintsValid) {
+            // Evaluar función objetivo
+            const objValue = evaluate(objectiveFunction, { x1, x2 });
+
+            if (
+              (optimizationType === "maximize" && objValue > bestResult) ||
+              (optimizationType === "minimize" && objValue < bestResult)
+            ) {
+              bestResult = objValue;
+              bestValues = { x1, x2 };
+            }
+          }
         }
+      }
 
-        // Almacenar el detalle de la evaluación de la restricción
-        evaluatedConstraints.push({
-          label: `Restricción ${index + 1}`,
-          result: constraintResult,
-          x1,
-          x2,
-          valid: isValid ? "Cumplida" : "No Cumplida"
-        });
-      });
-
-      // Agregar los resultados a la salida
+      // Generar resultados
       setResult([
-        { label: "Resultado Función Objetivo", value: objResult },
-        ...evaluatedConstraints,
+        { label: "Función Objetivo", value: objectiveFunction },
+        { label: "Optimización", value: optimizationType === "maximize" ? "Maximizar" : "Minimizar" },
+        { label: "Mejor Resultado", value: bestResult !== null ? bestResult.toFixed(4) : "No encontrado" },
+        ...(bestValues
+          ? [
+              { label: "Mejor x1", value: bestValues.x1.toFixed(4) },
+              { label: "Mejor x2", value: bestValues.x2.toFixed(4) },
+            ]
+          : [{ label: "Valores de x1 y x2", value: "No cumplen restricciones" }]),
       ]);
     } catch (error) {
-      setResult([{ label: "Error", value: "Hubo un error en la evaluación de la expresión." }]);
+      setResult([{ label: "Error", value: "Error en la evaluación de la función o restricciones." }]);
     }
   };
 
@@ -58,8 +76,18 @@ export const GeometricPage = () => {
   const handleReset = () => {
     reset();
     setObjectiveFunction("");
-    setConstraints([""]);
+    setConstraints([{ expression: "", operator: "<=", limit: "" }]);
     setResult([]);
+  };
+
+  const addConstraint = () => {
+    setConstraints([...constraints, { expression: "", operator: "<=", limit: "" }]);
+  };
+
+  const updateConstraint = (index, field, value) => {
+    const updatedConstraints = [...constraints];
+    updatedConstraints[index][field] = value;
+    setConstraints(updatedConstraints);
   };
 
   return (
@@ -76,16 +104,57 @@ export const GeometricPage = () => {
             placeholder="Ej: (x1^2 + 1) / (x2 + 1)"
           />
         </div>
+
         <div className="mb-4">
-          <label className="block font-semibold text-gray-700">Restricciones (separadas por comas):</label>
-          <input
-            type="text"
-            value={constraints.join(",")}
-            onChange={(e) => setConstraints(e.target.value.split(",").map((str) => str.trim()))}
+          <label className="block font-semibold text-gray-700">Tipo de Optimización:</label>
+          <select
+            value={optimizationType}
+            onChange={(e) => setOptimizationType(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-600"
-            placeholder="Ej: (x1 + 1) / (x2 + 1) <= 5, x1 + x2 >= 3"
-          />
+          >
+            <option value="maximize">Maximizar</option>
+            <option value="minimize">Minimizar</option>
+          </select>
         </div>
+
+        <div className="mb-4">
+          <label className="block font-semibold text-gray-700">Restricciones:</label>
+          {constraints.map((constraint, index) => (
+            <div key={index} className="flex space-x-2 mb-2">
+              <input
+                type="text"
+                value={constraint.expression}
+                onChange={(e) => updateConstraint(index, "expression", e.target.value)}
+                className="flex-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-600"
+                placeholder="Ej: (x1 + 1) / (x2 + 1)"
+              />
+              <select
+                value={constraint.operator}
+                onChange={(e) => updateConstraint(index, "operator", e.target.value)}
+                className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-600"
+              >
+                <option value="<=">{"<="}</option>
+                <option value=">=">{">="}</option>
+                <option value="=">{"="}</option>
+              </select>
+              <input
+                type="text"
+                value={constraint.limit}
+                onChange={(e) => updateConstraint(index, "limit", e.target.value)}
+                className="flex-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-600"
+                placeholder="Límite"
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addConstraint}
+            className="text-green-600 hover:underline mt-2"
+          >
+            + Agregar Restricción
+          </button>
+        </div>
+
         <button
           type="submit"
           className="w-full bg-green-600 text-white rounded-lg py-2 hover:bg-green-700 transition duration-300"
@@ -109,12 +178,6 @@ export const GeometricPage = () => {
             {result.map((metric, index) => (
               <li key={index} className="text-gray-600">
                 <strong>{metric.label}:</strong> {metric.value}
-                {metric.x1 !== undefined && metric.x2 !== undefined && (
-                  <p className="text-gray-500 mt-2">
-                    <strong>Evaluación:</strong> Para la restricción, con x1 = {metric.x1}, x2 = {metric.x2}.
-                    Resultado de la restricción: <strong>{metric.result}</strong> - {metric.valid}
-                  </p>
-                )}
               </li>
             ))}
           </ul>

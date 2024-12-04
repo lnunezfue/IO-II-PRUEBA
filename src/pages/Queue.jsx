@@ -43,7 +43,7 @@ export const Queue = () => {
 
   return (
     <div className="flex flex-col items-center justify-center bg-gray-50">
-      <h1 className="text-3xl font-bold mb-8 mt-6 text-gray-700">Queue Theory Calculator</h1>
+      <h1 className="text-3xl font-bold mb-8 mt-6 text-gray-700">Teoria de Colas Calculadora</h1>
       <form onSubmit={onSubmit} className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
         {/* Tasa de llegada (λ) */}
         <div className="mb-6">

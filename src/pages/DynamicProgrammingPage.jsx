@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 
 export const DynamicProgrammingPage = () => {
-  // Estado para manejar la entrada de datos y resultados
   const [numItems, setNumItems] = useState(0);
   const [capacity, setCapacity] = useState(0);
   const [weights, setWeights] = useState([]);
   const [values, setValues] = useState([]);
   const [dpResult, setDpResult] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
-  const [problemType, setProblemType] = useState('knapsack'); // Tipo de problema: mochila, brigadas o diligencia de rutas
+  const [problemType, setProblemType] = useState('knapsack');
+  const [distances, setDistances] = useState([]);
 
-  // Valores predefinidos para cada tipo de problema
   const predefinedProblems = {
     knapsack: {
       numItems: 4,
@@ -20,33 +19,32 @@ export const DynamicProgrammingPage = () => {
     },
     brigades: {
       numItems: 3,
-      capacity: 6,  // Capacidad total de brigadas
-      weights: [2, 3, 4],  // Asumimos que cada brigada tiene un "peso" (capacidad que puede cubrir)
-      values: [4, 5, 6]  // El valor es el "beneficio" que aporta cada brigada
+      capacity: 6,
+      weights: [2, 3, 4],
+      values: [4, 5, 6]
     },
     routes: {
       numItems: 4,
-      capacity: 0,  // No hay capacidad en la diligencia, es un problema de rutas
+      capacity: 0,
       weights: [
-        [0, 10, 15, 30], // Costos entre puntos (de ciudad 0 a 3)
+        [0, 10, 15, 30],
         [10, 0, 35, 25],
         [15, 35, 0, 10],
         [30, 25, 10, 0]
       ],
-      values: [0, 0, 0, 0]  // No hay valores en este caso, solo costos entre los puntos
+      values: [0, 0, 0, 0]
     }
   };
 
-  // Función que actualiza los valores del problema basado en la selección
   useEffect(() => {
     const problemData = predefinedProblems[problemType];
     setNumItems(problemData.numItems);
     setCapacity(problemData.capacity);
     setWeights(problemData.weights);
     setValues(problemData.values);
+    setDistances(problemData.weights);
   }, [problemType]);
 
-  // Manejar cambios en los valores de los objetos (peso y valor)
   const handleInputChange = (e, type, index) => {
     const value = parseInt(e.target.value);
     if (type === 'weight') {
@@ -60,17 +58,29 @@ export const DynamicProgrammingPage = () => {
     }
   };
 
-  // Cálculo de la programación dinámica (adaptado para cada tipo de problema)
+  const handleDistanceChange = (e, from, to) => {
+    const newDistances = [...distances];
+    newDistances[from][to] = parseInt(e.target.value);
+    newDistances[to][from] = parseInt(e.target.value);
+    setDistances(newDistances);
+  };
+
   const calculateDP = () => {
-    if (numItems === 0 || capacity === 0 || weights.length === 0 || values.length === 0) {
-      alert('Por favor, ingrese todos los datos.');
-      return;
-    }
+    if (problemType === 'knapsack' || problemType === 'brigades') {
+      if (numItems === 0 || capacity === 0 || weights.length === 0 || values.length === 0) {
+        alert('Por favor, ingrese todos los datos.');
+        return;
+      }
+    } else if (problemType === 'routes') {
+      if (numItems === 0 || distances.length === 0 || distances.some(row => row.length !== numItems)) {
+        alert('Por favor, ingrese correctamente todas las distancias.');
+        return;
+      }
+    }    
 
     let dp, maxValue, itemsSelected;
 
     if (problemType === 'knapsack') {
-      // Problema de la mochila
       dp = Array(numItems + 1).fill(null).map(() =>
         Array(capacity + 1).fill(0)
       );
@@ -96,7 +106,6 @@ export const DynamicProgrammingPage = () => {
       }
 
     } else if (problemType === 'brigades') {
-      // Problema de brigadas (ejemplo simplificado)
       dp = Array(numItems + 1).fill(null).map(() =>
         Array(capacity + 1).fill(0)
       );
@@ -114,7 +123,7 @@ export const DynamicProgrammingPage = () => {
       maxValue = dp[numItems][capacity];
       itemsSelected = [];
       let w = capacity;
-      let brigadeAssignments = Array(numItems).fill(0); // Inicializa las brigadas asignadas
+      let brigadeAssignments = Array(numItems).fill(0);
       for (let i = numItems; i > 0; i--) {
         if (dp[i][w] !== dp[i - 1][w]) {
           brigadeAssignments[i - 1] += 1;
@@ -122,18 +131,23 @@ export const DynamicProgrammingPage = () => {
         }
       }
 
-      // Asigna las brigadas a cada país o punto
       itemsSelected = brigadeAssignments.map((num, idx) => `País/Punto ${idx + 1}: ${num} brigadas`);
-      
+
     } else if (problemType === 'routes') {
-      // Problema de diligencia de rutas (algoritmo de costo mínimo)
-      const dist = weights; // La matriz de distancias
+      const dist = distances;
 
-      // Inicialización del DP
+      for (let i = 0; i < numItems; i++) {
+        for (let j = 0; j < numItems; j++) {
+          if (dist[i][j] === undefined || isNaN(dist[i][j])) {
+            alert('Por favor asegúrese de que todas las distancias estén ingresadas correctamente.');
+            return;
+          }
+        }
+      }      
+
       dp = Array(numItems).fill(Infinity);
-      dp[0] = 0; // El costo de la primera ciudad es 0
+      dp[0] = 0;
 
-      // Llenado de la matriz de DP (algoritmo de costo mínimo)
       let previousCity = Array(numItems).fill(null);
 
       for (let i = 0; i < numItems; i++) {
@@ -145,17 +159,15 @@ export const DynamicProgrammingPage = () => {
         }
       }
 
-      maxValue = dp[numItems - 1]; // El costo mínimo es el valor en la última ciudad
+      maxValue = dp[numItems - 1];
       let path = [];
       let currentCity = numItems - 1;
 
-      // Reconstruir el camino
       while (currentCity !== null) {
         path.push(currentCity);
         currentCity = previousCity[currentCity];
       }
 
-      // Mostrar la ruta más corta
       itemsSelected = path.reverse().map(city => `Ciudad ${city + 1}`);
     }
 
@@ -163,28 +175,25 @@ export const DynamicProgrammingPage = () => {
     setSelectedItems(itemsSelected);
   };
 
-  // Resetear valores
   const resetForm = () => {
     setNumItems(0);
     setCapacity(0);
     setWeights([]);
     setValues([]);
+    setDistances([]);
     setDpResult(null);
     setSelectedItems([]);
   };
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-2xl font-bold text-center mb-6">Programación Dinámica - Selección de Problema</h1>
-
-      {/* Selector de Tipo de Problema */}
-      <div className="mb-4">
-        <label htmlFor="problemType" className="block font-semibold">Seleccionar tipo de problema:</label>
+      <h1 className="text-2xl font-bold text-center mb-6 text-blue-600">Problema de Programación Dinámica</h1>
+      <div className="mb-6">
+        <label className="text-lg font-semibold">Selecciona el tipo de problema:</label>
         <select
-          id="problemType"
           value={problemType}
           onChange={(e) => setProblemType(e.target.value)}
-          className="p-2 border rounded-lg"
+          className="p-2 border rounded-lg w-full"
         >
           <option value="knapsack">Mochila</option>
           <option value="brigades">Brigadas</option>
@@ -192,80 +201,116 @@ export const DynamicProgrammingPage = () => {
         </select>
       </div>
 
-      {/* Entrada de Número de Objetos y Capacidad */}
-      <div className="mb-4">
-        <label htmlFor="numItems" className="block font-semibold">Número de Objetos:</label>
-        <input
-          type="number"
-          id="numItems"
-          value={numItems}
-          onChange={(e) => setNumItems(Number(e.target.value))}
-          className="p-2 border rounded-lg"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="capacity" className="block font-semibold">Capacidad Máxima:</label>
-        <input
-          type="number"
-          id="capacity"
-          value={capacity}
-          onChange={(e) => setCapacity(Number(e.target.value))}
-          className="p-2 border rounded-lg"
-        />
-      </div>
-
-      {/* Entradas de Pesos y Valores */}
-      <div className="mb-4">
-        <h3 className="font-semibold">Ingresar Pesos y Valores de los Objetos</h3>
-        {Array.from({ length: numItems }, (_, index) => (
-          <div key={index} className="flex space-x-4">
+      {problemType === 'knapsack' || problemType === 'brigades' ? (
+        <div>
+          <div className="mb-4">
+            <label className="block text-lg font-semibold">Capacidad:</label>
             <input
               type="number"
-              placeholder={`Peso ${index + 1}`}
-              value={weights[index] || ''}
-              onChange={(e) => handleInputChange(e, 'weight', index)}
-              className="p-2 border rounded-lg"
-            />
-            <input
-              type="number"
-              placeholder={`Valor ${index + 1}`}
-              value={values[index] || ''}
-              onChange={(e) => handleInputChange(e, 'value', index)}
+              value={capacity}
+              onChange={(e) => setCapacity(Number(e.target.value))}
               className="p-2 border rounded-lg"
             />
           </div>
-        ))}
-      </div>
 
-      {/* Botones para Calcular y Reiniciar */}
-      <div className="flex space-x-4">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-green-600">Datos de Pesos y Valores</h2>
+            <table className="table-auto w-full border-collapse border mt-4">
+              <thead>
+                <tr>
+                  <th className="border px-4 py-2">Ítem</th>
+                  <th className="border px-4 py-2">Peso</th>
+                  <th className="border px-4 py-2">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: numItems }).map((_, index) => (
+                  <tr key={index}>
+                    <td className="border px-4 py-2">Ítem {index + 1}</td>
+                    <td className="border px-4 py-2">
+                      <input
+                        type="number"
+                        value={weights[index] || ''}
+                        onChange={(e) => handleInputChange(e, 'weight', index)}
+                        className="p-2 border rounded-lg"
+                      />
+                    </td>
+                    <td className="border px-4 py-2">
+                      <input
+                        type="number"
+                        value={values[index] || ''}
+                        onChange={(e) => handleInputChange(e, 'value', index)}
+                        className="p-2 border rounded-lg"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : problemType === 'routes' ? (
+        <div>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-red-600">Distancias entre Ciudades</h2>
+            <table className="table-auto w-full border-collapse border mt-4">
+              <thead>
+                <tr>
+                  <th className="border px-4 py-2">Desde/Ciudad</th>
+                  {[...Array(numItems)].map((_, index) => (
+                    <th key={index} className="border px-4 py-2">Ciudad {index + 1}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(numItems)].map((_, fromIndex) => (
+                  <tr key={fromIndex}>
+                    <td className="border px-4 py-2">Ciudad {fromIndex + 1}</td>
+                    {[...Array(numItems)].map((_, toIndex) => (
+                      <td key={toIndex} className="border px-4 py-2">
+                        <input
+                          type="number"
+                          value={distances[fromIndex][toIndex] || ''}
+                          onChange={(e) => handleDistanceChange(e, fromIndex, toIndex)}
+                          className="p-2 border rounded-lg"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-6 flex justify-center">
         <button
-          type="button"
           onClick={calculateDP}
-          className="bg-black text-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-700"
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg mr-4"
         >
           Calcular
         </button>
         <button
-          type="button"
           onClick={resetForm}
-          className="bg-gray-700 text-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-600"
+          className="bg-gray-400 text-white px-6 py-2 rounded-lg"
         >
-          Reiniciar
+          Restablecer
         </button>
       </div>
 
-      {/* Mostrar los resultados */}
       {dpResult !== null && (
-        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-          <h2 className="text-lg font-semibold mb-4">Resultado</h2>
-          <p className="text-lg">Valor máximo o costo mínimo: {dpResult}</p>
-          <p className="text-lg">Decisiones tomadas: {selectedItems.join(", ")}</p>
+        <div className="mt-6 text-center">
+          <h2 className="text-xl font-semibold">Resultado</h2>
+          <p className="text-lg">Valor máximo: {dpResult}</p>
+          <h3 className="mt-4 text-lg font-semibold">Elementos seleccionados:</h3>
+          <ul>
+            {selectedItems.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
   );
 };
-
-export default DynamicProgrammingPage;
